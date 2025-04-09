@@ -26,7 +26,3 @@
   ],
   "license": "MIT"
 }
-
-"scripts": {
-  "start": "node agentClient.js"
-}
