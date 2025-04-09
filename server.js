@@ -11,5 +11,5 @@ app.use(express.json());
 app.use("/chat", chatRoutes);
 app.get("/", (req, res) => res.send("✅ AI Agent Backend is Live and Working!"));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
