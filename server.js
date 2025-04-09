@@ -1,34 +1,40 @@
-const express = require("express");
-const axios = require("axios");
-const cors = require("cors");
 require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const { client, AZURE_AGENT_ID } = require("./agentClient");
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 app.post("/askAgent", async (req, res) => {
-  const { AZURE_AI_KEY, AZURE_AI_ENDPOINT } = process.env;
-
   try {
-    const response = await axios.post(AZURE_AI_ENDPOINT, req.body, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${AZURE_AI_KEY}`
-      }
+    const { input_data } = req.body;
+
+    const thread = await client.agents.createThread(AZURE_AGENT_ID);
+    await client.agents.createMessage(thread.id, {
+      role: "user",
+      content: JSON.stringify(input_data)
     });
 
-    res.status(200).json(response.data);
+    let run = await client.agents.createRun(thread.id, AZURE_AGENT_ID);
+
+    while (run.status === "queued" || run.status === "in_progress") {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      run = await client.agents.getRun(thread.id, run.id);
+    }
+
+    const messages = await client.agents.listMessages(thread.id);
+    const finalMessage = messages[0]?.content || "No response";
+
+    res.json({ result: finalMessage });
   } catch (err) {
-    console.error("AI agent error:", err.message);
-    res.status(500).json({
-      error: "AI call failed",
-      details: err.message
-    });
+    console.error("Agent error:", err.message);
+    res.status(500).json({ error: "Agent call failed", details: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ AI Agent backend running on port ${PORT}`);
+  console.log(`🧠 Agent backend running on port ${PORT}`);
 });
